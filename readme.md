@@ -1,5 +1,8 @@
 ## 说明文档
 
+## v1.1版本更新说明：
+解决了下载速度慢的bug，上传样本时可以指定区间
+
 此工具主要提供两个功能：1、从 bazaar.abuse.ch 下载恶意样本 2、将恶意样本上传至微步云沙箱并下载流量包及报告
 
 默认云沙箱环境：win7 office2013
@@ -16,6 +19,8 @@ Options:
   -u, --upload       上传样本到云沙箱并下载报告
   -e EXT, --ext=EXT  指定爬取的木马扩展名(deault:exe)
   -n NUM, --num=NUM  指定下载样本数(deault:10)
+  --start=START      上传起始序号(deault:1)
+  --end=END          上传终止序号(deault:10)
 ```
 
 ### 下载样本
