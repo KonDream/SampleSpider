@@ -44,10 +44,10 @@ python GetSample.py -d -n 100
 
 ### 上传样本
 
-使用 -u 选项直接将 Sample 目录下的全部样本上传至云沙箱
+使用 -u 选项将 Sample 目录下指定区间的样本上传至云沙箱
 
 ```powershell
-python GetSample.py -u
+python GetSample.py -u --start 1 --end 10
 ```
 
 下载的报告以 json 格式储存在 Report 目录下，流量包储存在 Pcap 目录下
@@ -58,6 +58,9 @@ python GetSample.py -u
 
 所有带密码的压缩包密码均是infected 我并没有做解压的操作而是直接上传压缩包
 
+在进行上传操作时可能会因为请求频繁而被ban ip，所以上传时请控制单次上传样本量在10个左右，并自备代理池
+
+如无法下载请先将代码中的cookie替换为自己的cookie，然后再去排查别的问题（可能是网络，也可能是被ban了）
 
 
 ## 运行截图
