@@ -2,7 +2,7 @@
 Author: KonDream
 Date: 2022-06-04 21:19:32
 LastEditors:  KonDream
-LastEditTime: 2022-06-07 20:29:10
+LastEditTime: 2022-06-30 15:25:40
 Description:    
 '''
 import requests
@@ -19,6 +19,8 @@ parser.add_option("-u", "--upload", action="store_true", help="上传样本到�
 parser.add_option("-e", "--ext", action="store", help="指定爬取的木马扩展名(deault:exe)", default="exe")
 # parser.add_option("-t", "--time", action="store", help="指定样本分析时间(deault:60s)", default="60")
 parser.add_option("-n", "--num", type="int", action="store", help="指定下载样本数(deault:10)", default="10")
+parser.add_option("--start", type="int", action="store", help="上传起始序号(deault:1)", default="1")
+parser.add_option("--end", type="int", action="store", help="上传终止序号(deault:10)", default="10")
 
 headers = {
     "sec-ch-ua": '" Not A;Brand";v="99", "Chromium";v="102", "Microsoft Edge";v="102"',
@@ -53,6 +55,7 @@ def GetSampleUrl(filetype, num):
     print("***尝试获取url***")
     r = requests.get(url=download_url, headers=headers)   # 抓一千条
     download_url_list = re.findall('<a href="/download(.*?)/"', r.text)
+    
     if len(download_url_list) is not None:
         print("***获取url成功 开始下载***")
         try:
@@ -75,7 +78,7 @@ def GetSampleUrl(filetype, num):
     except Exception:
         exit("Network Error! Please Retry!")
 
-def Pushthreatbook():
+def Pushthreatbook(start, end):
     '''
     上传逻辑：前台上传样本文件 -> 上传成功返回一个sha256 -> 提交sha256并进行分析 -> 拼接url得到样本分析结果
     '''
@@ -101,15 +104,16 @@ def Pushthreatbook():
     sha256_value = []
 
     '''Step1 上传样本 并获得sha256'''
-    for i in range(len(Sample_path)):
+    for i in range(start-1, end):
+        time.sleep(2)
         files = {
-            'file': (open('Sample/{}'.format(Sample_path[i]), 'rb'))
+            'file': (open('Sample/Sample{}.zip'.format(i+1), 'rb'))
             }
         r = requests.post(url=upload_url, headers=upload_headers, files=files)
         response_content = ast.literal_eval(r.text)
         try:
             sha256_value.append(response_content['data']['sha256'])
-            print("Get sha256 value **{}**".format(sha256_value[i]))
+            print("Get sha256 value **{}**".format(sha256_value[i - start + 1]))
         except KeyError:
             exit('Upload failed! Please retry!')
 
@@ -120,39 +124,58 @@ def Pushthreatbook():
                 "package":"zip",
                 "private":'false',
                 "submit_params":{},
-                "sha256":sha256_value[i]
+                "sha256":sha256_value[i - start + 1]
             }
         r = requests.post(url=submit_sha256_url, json=json)
         try:
             response_state = ast.literal_eval(r.text)['data']['result']
-            print("Submit sha256 value, response state **{}**! {} done".format(response_state, Sample_path[i]))
+            
+            print("Submit sha256 value, response state **{}**! Sample{}.zip done".format(response_state, i+1))
         except KeyError:
             exit('Submit sha256 failed! Please retry!')
 
     '''Step3 wait60s 获取报告及流量包'''
     print("Please wait a long long long time for results...")
-    cookie = {
-        "rememberme":"bd72b1522836b3a60e3aae3326c946955ec18b47|0533c9cd52d743e499223010d9739fd4|1654408329644|public|w"
+    headers = {
+        "Host": "s.threatbook.cn",
+        "Connection": "close",
+        "Cache-Control": "max-age=0",
+        "sec-ch-ua": '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "Windows",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-User": "?1",
+        "Sec-Fetch-Dest": "document",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+        "Cookie": "gr_user_id=591dbbb2-ba7f-4f29-b5ac-bf95cab314b2; zg_did=%7B%22did%22%3A%20%22181326b9ae1b78-0d0301aab8d06f-15373079-144000-181326b9ae2876%22%7D; rememberme=629577e23dea1d90f94d4bec5f31ef80153e81a7|0533c9cd52d743e499223010d9739fd4|1656570012972|public|w; zg_8ce95389de054b5c90bb62222cf45190=%7B%22sid%22%3A%201656570003969%2C%22updated%22%3A%201656570013343%2C%22info%22%3A%201656570003971%2C%22superProperty%22%3A%20%22%7B%5C%22%E5%BA%94%E7%94%A8%E5%90%8D%E7%A7%B0%5C%22%3A%20%5C%22passport%5C%22%7D%22%2C%22platform%22%3A%20%22%7B%7D%22%2C%22utm%22%3A%20%22%7B%7D%22%2C%22referrerDomain%22%3A%20%22s.threatbook.cn%22%2C%22cuid%22%3A%20%22fa68d34397884b3a93d7ae1bfaf5c3e3%22%2C%22zs%22%3A%200%2C%22sc%22%3A%200%2C%22firstScreen%22%3A%201656570003969%7D",
+        "If-None-Match": "15ed-HVLz0UTJzwcvYFr7TMquk7/LMZE"
     }
-    for i in range(len(sha256_value)):
-        get_pcap_url = url + "/apis/sample/download/{}?type=pcap".format(sha256_value[i])
-        get_report_url = url + "/apis/sample/download/{}?type=report".format(sha256_value[i])   
-        print("网页版报告转至：{}/report/file/{}".format(url, sha256_value[i]))
+    for i in range(start-1, end):
+        get_pcap_url = url + "/apis/sample/download/{}?type=pcap".format(sha256_value[i - start + 1])
+        get_report_url = url + "/apis/sample/download/{}?type=report".format(sha256_value[i - start + 1])   
+        print("网页版报告转至：{}/report/file/{}".format(url, sha256_value[i - start + 1]))
+        # 必须要先请求一下这个链接才能下载
+        r = requests.get(url="https://s.threatbook.cn/apis/sample/basic/{}".format(sha256_value[i - start + 1]), headers=headers)
         while True:
             print("**尝试下载分析结果 请耐心等待...**")
-            r = requests.get(url=get_report_url, cookies=cookie)
+            r = requests.get(url=get_report_url, headers=headers)
             if len(r.text) > 100:
                 print("**下载成功！**")       
                 try:
                     with open('Report/report{}.zip'.format(i+1), 'wb') as f:
                         f.write(r.content)
-                    r = requests.get(url=get_pcap_url, cookies=cookie)
+                    r = requests.get(url=get_pcap_url, headers=headers)
                     with open('Pcap/pcap{}.zip'.format(i+1), 'wb') as f:
                         f.write(r.content)
                 except Exception:
                     pass
                 break
-            time.sleep(60)
+            time.sleep(10)
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
@@ -162,6 +185,6 @@ if __name__ == '__main__':
     if options.download is True:
         GetSampleUrl(options.ext, options.num)
     if options.upload is True:
-        Pushthreatbook()
+        Pushthreatbook(options.start, options.end)
 
 
